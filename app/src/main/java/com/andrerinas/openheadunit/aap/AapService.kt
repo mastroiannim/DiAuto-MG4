@@ -307,7 +307,6 @@ class AapService : Service(), UsbReceiver.Listener {
      * stale dongle that hasn't re-enumerated yet.
      * Cleared on USB detach (dongle reset complete) or on fresh USB attach.
      */
-    @Volatile
     @Volatile private var userExitedAA = false
     @Volatile private var userExitCooldownUntil = 0L
 
