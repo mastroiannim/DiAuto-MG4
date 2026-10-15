@@ -16,6 +16,7 @@ import android.media.audiofx.NoiseSuppressor
 import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.os.Build
+import android.os.Looper
 import androidx.core.content.ContextCompat
 import com.andrerinas.openheadunit.utils.AppLog
 import com.andrerinas.openheadunit.utils.Settings
@@ -203,6 +204,12 @@ class MicRecorder(private val micSampleRate: Int, private val context: Context) 
     private fun startScoAndRecord(): Boolean {
         val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            AppLog.w("MicRecorder: SCO setup requested on the main thread; using the local mic to avoid blocking UI.")
+            return startRecording(MediaRecorder.AudioSource.VOICE_RECOGNITION) ||
+                    startRecording(MediaRecorder.AudioSource.MIC)
+        }
+
         val hasBluetoothPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) ==
                     PackageManager.PERMISSION_GRANTED
@@ -260,7 +267,9 @@ class MicRecorder(private val micSampleRate: Int, private val context: Context) 
                 if (state == AudioManager.SCO_AUDIO_STATE_CONNECTED) {
                     connected.set(true)
                     latch.countDown()
-                } else if (state == AudioManager.SCO_AUDIO_STATE_DISCONNECTED && bluetoothScoStarted) {
+                } else if (state == AudioManager.SCO_AUDIO_STATE_DISCONNECTED &&
+                    bluetoothScoStarted && connected.get()
+                ) {
                     AppLog.w("MicRecorder: SCO Disconnected unexpectedly.")
                     stop()
                 }
