@@ -29,6 +29,10 @@ object CarNetworkQuirks {
     private val SCRIPT_PATHS = listOf("/system/bin/arp_update.sh", "/vendor/bin/arp_update.sh")
 
     /** Preference order among the allowed ports: the ones least likely to be taken already come first. */
+    /*
+     * TODO: Binding ServerSocket su porte OEM sensibili
+     * Possibile conflitto o hijacking di porte usate da servizi interni/T-Box.
+     */
     private val PREFERRED = listOf(30518, 30517, 8080, 6010)
 
     private val ACCEPT_TCP = Regex("""INPUT\s+-p\s+tcp\s+--dport\s+(\d+)\s+-j\s+ACCEPT""")
@@ -49,9 +53,13 @@ object CarNetworkQuirks {
     fun pickPort(firewall: Firewall?, isSaic: Boolean, isFree: (Int) -> Boolean): Pair<Int, String> {
         if (firewall != null && firewall.rejectsByDefault && firewall.allowedTcp.isNotEmpty()) {
             val candidates = PREFERRED.filter { it in firewall.allowedTcp } +
-                firewall.allowedTcp.filter { it !in PREFERRED }
+                    firewall.allowedTcp.filter { it !in PREFERRED }
             val chosen = candidates.firstOrNull { isFree(it) } ?: candidates.first()
-            return chosen to "restrictive firewall read from ${firewall.source} (allowed TCP: ${firewall.allowedTcp.joinToString(",")})"
+            return chosen to "restrictive firewall read from ${firewall.source} (allowed TCP: ${
+                firewall.allowedTcp.joinToString(
+                    ","
+                )
+            })"
         }
         if (firewall != null) {
             return STANDARD_PORT to "firewall read from ${firewall.source} without a default reject"
@@ -62,14 +70,19 @@ object CarNetworkQuirks {
         return STANDARD_PORT to "no SAIC firewall detected: standard port"
     }
 
-    @Volatile private var cachedPort: Int? = null
-    @Volatile private var cachedWhy: String = ""
-    @Volatile private var cachedArpNudge: Boolean? = null
+    @Volatile
+    private var cachedPort: Int? = null
+
+    @Volatile
+    private var cachedWhy: String = ""
+
+    @Volatile
+    private var cachedArpNudge: Boolean? = null
 
     private fun isSaicDevice(): Boolean =
         Build.MODEL.equals("SAIC", ignoreCase = true) ||
-            Build.DEVICE.contains("saic", ignoreCase = true) ||
-            Build.MANUFACTURER.equals("AUTUS", ignoreCase = true)
+                Build.DEVICE.contains("saic", ignoreCase = true) ||
+                Build.MANUFACTURER.equals("AUTUS", ignoreCase = true)
 
     private fun readFirewall(): Firewall? {
         for (path in SCRIPT_PATHS) {

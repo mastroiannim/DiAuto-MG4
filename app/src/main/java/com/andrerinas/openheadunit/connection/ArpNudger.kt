@@ -68,6 +68,10 @@ object ArpNudger {
                 DatagramSocket(0, host).use { socket ->
                     var i = 0
                     while (isActive && System.currentTimeMillis() < deadline) {
+                        /*
+                         * TODO: Flooding UDP a IP inesistenti / Assunzione subnet /24
+                         * Rischio saturazione tabella vicini ARP (ip neigh) nel kernel Linux IVI.
+                        */
                         // addresses .200 to .249: never handed out by the DHCP (low range), never the car
                         val lastOctet = 200 + (i % 50)
                         i++
