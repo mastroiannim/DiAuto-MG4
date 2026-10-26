@@ -1,5 +1,7 @@
-# DiAuto 0.3.11 — 2026-10-01
+# DiAuto-MG4 1.9.7 — 2026-10-26
 
+- Preserve explicitly selected USB-only or Wi-Fi-only connection modes during preference migration.
+- Keep Telegram crash-report credentials out of release builds unless release-specific credentials are provided.
 - Recover when the built-in car hotspot is enabled after DiAuto opens, without restarting the app.
 - Exclude wired, modem and BYD bridge interfaces from automatic hotspot selection while the real access point is still starting.
 - Refresh cached hotspot credentials after a phone-reported join failure before retrying.

@@ -29,7 +29,8 @@ object CarNetworkQuirks {
     private val SCRIPT_PATHS = listOf("/system/bin/arp_update.sh", "/vendor/bin/arp_update.sh")
 
     /** Preference order among the allowed ports: the ones least likely to be taken already come first. */
-    private val PREFERRED = listOf(30518, 30517, 8080, 6010)
+    private val PREFERRED = listOf(30518, 30517)
+    private val COMMON_SYSTEM_PORTS = setOf(8080, 6010)
 
     private val ACCEPT_TCP = Regex("""INPUT\s+-p\s+tcp\s+--dport\s+(\d+)\s+-j\s+ACCEPT""")
     private val DEFAULT_REJECT = Regex("""INPUT\s+-j\s+(REJECT|DROP)\b""")
@@ -49,7 +50,7 @@ object CarNetworkQuirks {
     fun pickPort(firewall: Firewall?, isSaic: Boolean, isFree: (Int) -> Boolean): Pair<Int, String> {
         if (firewall != null && firewall.rejectsByDefault && firewall.allowedTcp.isNotEmpty()) {
             val candidates = PREFERRED.filter { it in firewall.allowedTcp } +
-                    firewall.allowedTcp.filter { it !in PREFERRED }
+                    firewall.allowedTcp.filter { it !in PREFERRED && it !in COMMON_SYSTEM_PORTS }
             val chosen = candidates.firstOrNull { isFree(it) }
                 ?: return 0 to "no free TCP port allowed by ${firewall.source}"
             return chosen to "restrictive firewall read from ${firewall.source} (allowed TCP: ${
@@ -109,6 +110,7 @@ object CarNetworkQuirks {
 
     private fun canBind(port: Int): Boolean = try {
         ServerSocket().use { s ->
+            s.reuseAddress = false
             s.bind(java.net.InetSocketAddress(port))
         }
         true

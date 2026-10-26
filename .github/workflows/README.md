@@ -1,8 +1,47 @@
 # CI
 
-Android CI runs tests and builds the github debug and optimized release variants using
-JDK 17, SDK 36, NDK 29.0.14206865 and CMake 3.22.1. CI release artifacts are unsigned;
-the maintainer signs public APKs privately. No signing secrets are available to PRs.
+`android-ci.yml` runs on pull requests and pushes to `main` with `contents: read`.
+It uses no repository secrets and has no signing or release-publishing step. The
+existing build job runs car unit tests, car lint, and car/phone debug builds; its
+debug APK and test-report uploads remain review artifacts, not signed releases.
 
-Publish download site deploys only `site/` to GitHub Pages after regenerating all five
+Security checks are scoped to prevent disclosing existing sensitive material:
+
+- Gitleaks 8.30.1 scans commits introduced by the pull request or push. If a
+  push has no prior base SHA, it scans available history instead. Its Linux
+  binary is SHA-256 verified, results are fully redacted, and reports and
+  scanner logs are not uploaded or printed.
+- Semgrep 1.182.0 runs the `p/default` ruleset with metrics disabled and reports
+  only findings new relative to the PR base or prior `main` commit; without a
+  prior base SHA, it scans the full checkout. Reports and scanner logs are not
+  uploaded or printed.
+- Dependency Review runs on pull requests for runtime, development, and unknown
+  scopes, failing on any newly introduced vulnerability at low severity or
+  above. License checking is enabled, but no allow-list is enforced until
+  maintainers approve a license policy.
+
+The secret scan is not a whole-tree or history scan in normal PR/push events:
+pre-existing files and findings outside the introduced commit range are
+intentionally not inspected by this phase. No platform signing key, receiver,
+or Telegram-token configuration is changed here.
+
+## Repository settings to apply manually
+
+1. Enable **Settings → Code security and analysis → Dependency graph** so
+   Dependency Review can compare pull-request manifests.
+2. Protect `main` with a pull request requirement, at least one approval, stale
+   approval dismissal, up-to-date branches, and restrictions on force-pushes
+   and deletion. Require these successful status checks:
+   - `Build (github debug)`
+   - `Unit tests (car debug)`
+   - `Secret scan (introduced commits)`
+   - `Dependency review`
+   - `Semgrep SAST (new findings)`
+3. Enable secret scanning and push protection under **Code security and
+   analysis** wherever the repository plan supports them. These GitHub
+   settings are separate from the read-only Gitleaks CI job.
+4. Approve a license allow-list before adding one to Dependency Review; no
+   project-wide license policy is assumed by this workflow.
+
+The Pages workflow separately deploys only `site/` after regenerating all five
 language editions. Pages uses the GitHub Actions deployment source.

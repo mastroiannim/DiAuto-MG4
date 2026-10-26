@@ -2,8 +2,11 @@ package com.andrerinas.openheadunit.connection
 
 import com.andrerinas.openheadunit.utils.AppLog
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -32,6 +35,7 @@ import java.net.NetworkInterface
 object ArpNudger {
     private const val TAG = "ArpNudger"
     private const val INTERVAL_MS = 150L
+    private const val MAX_BACKOFF_MS = 1_000L
     private const val MAX_DATAGRAMS = 50
 
     @Volatile
@@ -65,11 +69,13 @@ object ArpNudger {
             return
         }
         runningFor = hostIp
-        job = scope.launch(Dispatchers.IO) {
+        val nudgeJob = scope.launch(Dispatchers.IO, start = CoroutineStart.LAZY) {
+            val currentJob = currentCoroutineContext()[Job]
             AppLog.i("$TAG: ARP wake-up active for ${host.hostAddress} (${durationMs / 1000}s) -- the car's kernel has arp_ignore=8.")
             val deadline = System.currentTimeMillis() + durationMs
             var sent = 0
             var errors = 0
+            var backoffMs = INTERVAL_MS
             try {
                 // source = hotspot address, so the ARP sender IP is the one the phone is looking for
                 DatagramSocket(0, host).use { socket ->
@@ -83,14 +89,26 @@ object ArpNudger {
                         } catch (e: Exception) {
                             if (errors++ < 3) AppLog.w("$TAG: cannot send UDP: ${e.javaClass.simpleName}: ${e.message}")
                         }
-                        delay(INTERVAL_MS)
+                        delay(backoffMs)
+                        backoffMs = (backoffMs * 2).coerceAtMost(MAX_BACKOFF_MS)
                     }
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 AppLog.w("$TAG: stopped on error ${e.javaClass.simpleName}: ${e.message}")
+            } finally {
+                synchronized(this@ArpNudger) {
+                    if (job === currentJob) {
+                        job = null
+                        runningFor = null
+                    }
+                }
             }
             AppLog.i("$TAG: ARP wake-up finished ($sent datagrams, $errors errors).")
         }
+        job = nudgeJob
+        nudgeJob.start()
     }
 
     private fun targetAddresses(host: Inet4Address, raw: ByteArray): List<InetAddress> {

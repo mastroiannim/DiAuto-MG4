@@ -1,7 +1,8 @@
 # DiAuto-MG4 — vehicle test checklist
 
 Platform: MG4 Comfort SWI69 / Android 9 (AUTUS SAIC MT2712).  
-APK: platform-signed `com.drivehub.diauto.mg4` (see `scripts/build_mg4.ps1`).
+Car APK: platform-signed `com.drivehub.diauto.mg4` (see `scripts/build_mg4.ps1`).
+Phone APK: `com.drivehub.diauto.mg4.phone`, without the system UID.
 
 Do **not** run DiPlay-MG4 CarPlay and DiAuto-MG4 Android Auto at the same time.
 
@@ -13,12 +14,15 @@ Do **not** run DiPlay-MG4 CarPlay and DiAuto-MG4 Android Auto at the same time.
    ```
 2. `$env:MG4_PLATFORM_KEYS_DIR = "<dir with platform.pk8 and platform.x509.pem>"`
 3. `powershell -File scripts\build_mg4.ps1`
-4. `adb install -r ..\DiAuto-MG4-v0.3.11-mg4.3.apk`
+4. `adb install -r ..\DiAuto-MG4-v1.9.7.apk`
 
 Phone desk APK (no platform key): `powershell -File scripts\build_phone.ps1` then
-`adb install -r ..\DiAuto-MG4-phone-debug.apk` (package `com.drivehub.diauto.mg4.phone`).
+`adb install -r ..\DiAuto-MG4-phone-debug.apk`. Use Demo battery values for desk tests.
+The phone flavor is not expected to read MG4 SoC/BMS through CarProperty or force-stop
+OEM Android Auto apps; these behaviors have not been verified on a vehicle.
 
 EVHardware is vendored at `evhardware/` (no git submodule).
+See [README.md](../README.md) for `phoneRelease` and `carRelease` builds.
 
 ## Connection (Android 9 car hotspot)
 
@@ -36,18 +40,18 @@ EVHardware is vendored at `evhardware/` (no git submodule).
 3. Logcat filter: `DiAuto-MG4`
 4. Expect before/during connect:
    - `DiAuto-MG4 battery XX% range YYkm (demo)` or `(car)`
-4. After AA session starts and the phone requests sensor 23:
+5. After an Android Auto session starts and the phone requests sensor 23:
    - `DiAuto-MG4 phone requested VEM sensor type=23`
    - `DiAuto-MG4 vem tx capacity=...Wh current=...Wh range=...km battery=...%`
-5. On **Android Auto Maps on the head unit**: pick a destination and start — charging
+6. On **Android Auto Maps on the head unit**: pick a destination and start — charging
    stops + arrival SoC should appear. That projected AA Maps surface is the path Google
    wires to VehicleEnergyModel.
-6. **Phone Google Maps app** (unlock phone → open Maps → destination → Start) is a
+7. **Phone Google Maps app** (unlock phone → open Maps → destination → Start) is a
    different UI. Even with a live AA session and working VEM (`vem tx` in logs), that
    phone chrome often shows a normal route **without** charging stops / arrival SoC.
    That is Google Maps behaviour, not a missing DiAuto sensor: if the head-unit AA Maps
    already shows the EV plan, the energy model is reaching the phone.
-7. If VEM is not requested: confirm Service Discovery logged  
+8. If VEM is not requested: confirm Service Discovery logged
    `Announcing EV energy sensors (23/25/26) + ELECTRIC fuel type`  
    then reconnect after battery settings / first SoC log.
 

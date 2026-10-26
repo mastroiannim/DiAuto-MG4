@@ -16,6 +16,8 @@ import android.media.audiofx.NoiseSuppressor
 import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.os.Build
+import android.os.Handler
+import android.os.HandlerThread
 import android.os.Looper
 import androidx.core.content.ContextCompat
 import com.andrerinas.openheadunit.utils.AppLog
@@ -61,6 +63,7 @@ class MicRecorder(private val micSampleRate: Int, private val context: Context) 
     // Tracks whether this instance started Bluetooth SCO so we can clean it up
     private var bluetoothScoStarted = false
     private var scoReceiver: BroadcastReceiver? = null
+    private var scoReceiverThread: HandlerThread? = null
 
     companion object {
         // Sentinel value stored in settings to indicate Bluetooth SCO mode
@@ -112,6 +115,8 @@ class MicRecorder(private val micSampleRate: Int, private val context: Context) 
         } catch (e: Exception) {
         }
         scoReceiver = null
+        scoReceiverThread?.quitSafely()
+        scoReceiverThread = null
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val device = audioManager.communicationDevice
@@ -253,10 +258,6 @@ class MicRecorder(private val micSampleRate: Int, private val context: Context) 
                     startRecording(MediaRecorder.AudioSource.MIC)
         }
 
-        /*
-         * TODO: Possibile ANR / mancata attivazione microfono Bluetooth SCO su Main Looper.
-         * CountDownLatch.await sincrono in attesa di broadcast SCO
-         */
         // Legacy SCO: wait briefly for CONNECTED, then fall back to cabin mic.
         val connected = AtomicBoolean(false)
         val latch = CountDownLatch(1)
@@ -276,18 +277,38 @@ class MicRecorder(private val micSampleRate: Int, private val context: Context) 
             }
         }
 
-        ContextCompat.registerReceiver(
-            context,
-            scoReceiver,
-            IntentFilter(AudioManager.ACTION_SCO_AUDIO_STATE_UPDATED),
-            ContextCompat.RECEIVER_EXPORTED,
-        )
+        val receiverThread = HandlerThread("MicRecorderScoReceiver").apply { start() }
+        scoReceiverThread = receiverThread
+        try {
+            ContextCompat.registerReceiver(
+                context,
+                scoReceiver,
+                IntentFilter(AudioManager.ACTION_SCO_AUDIO_STATE_UPDATED),
+                null,
+                Handler(receiverThread.looper),
+                ContextCompat.RECEIVER_EXPORTED,
+            )
+        } catch (e: Exception) {
+            AppLog.e("MicRecorder: Failed to register SCO receiver", e)
+            receiverThread.quitSafely()
+            scoReceiverThread = null
+            scoReceiver = null
+            return startRecording(MediaRecorder.AudioSource.VOICE_RECOGNITION) ||
+                    startRecording(MediaRecorder.AudioSource.MIC)
+        }
 
         AppLog.i("MicRecorder: Starting Bluetooth SCO...")
         bluetoothScoStarted = true
-        audioManager.startBluetoothSco()
-        @Suppress("DEPRECATION")
-        audioManager.isBluetoothScoOn = true
+        try {
+            audioManager.startBluetoothSco()
+            @Suppress("DEPRECATION")
+            audioManager.isBluetoothScoOn = true
+        } catch (e: Exception) {
+            AppLog.e("MicRecorder: Failed to start Bluetooth SCO", e)
+            cleanupSco()
+            return startRecording(MediaRecorder.AudioSource.VOICE_RECOGNITION) ||
+                    startRecording(MediaRecorder.AudioSource.MIC)
+        }
 
         val scoOk = try {
             latch.await(SCO_CONNECT_TIMEOUT_MS, TimeUnit.MILLISECONDS) && connected.get()
