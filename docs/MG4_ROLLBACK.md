@@ -1,4 +1,4 @@
-# MG4 rollback and recovery — DiAuto car 1.9.7
+# MG4 rollback and recovery — DiAuto car 1.9.8
 
 This is a conservative operator runbook, not an SAIC service procedure. It has not
 been validated on a vehicle. Use only on the documented MG4 SWI69 / Android 9

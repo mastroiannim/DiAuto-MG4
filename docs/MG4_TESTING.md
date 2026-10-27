@@ -22,7 +22,7 @@ for validating the platform-signed car flavor.
    ```
 2. `$env:MG4_PLATFORM_KEYS_DIR = "<dir with platform.pk8 and platform.x509.pem>"`
 3. `powershell -File scripts\build_mg4.ps1`
-4. `adb install -r ..\DiAuto-MG4-v1.9.7.apk`
+4. `adb install -r ..\DiAuto-MG4-v1.9.8.apk`
 
 Phone desk APK (no platform key): `powershell -File scripts\build_phone.ps1` then
 `adb install -r ..\DiAuto-MG4-phone-debug.apk`. Use Demo battery values for desk tests.

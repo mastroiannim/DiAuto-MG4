@@ -1,3 +1,9 @@
+# DiAuto-MG4 1.9.8 — 2026-10-27
+
+- OTA updates now read releases from the mastroiannim/DiAuto-MG4 GitHub repository.
+- OTA picks the APK matching the installed flavor (`-car` or `-phone`) so a head unit never downloads the phone build.
+- Hotspot BSSID: prefer the live access-point interface address over the static override, with a mismatch warning.
+
 # DiAuto-MG4 1.9.7 — 2026-10-26
 
 - Preserve explicitly selected USB-only or Wi-Fi-only connection modes during preference migration.

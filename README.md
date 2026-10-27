@@ -40,7 +40,7 @@ If you haven't sideloaded apps before:
 ```powershell
 $env:MG4_PLATFORM_KEYS_DIR = "C:\path\to\platform-keys"  # platform.pk8 + platform.x509.pem
 powershell -File scripts\build_mg4.ps1
-adb install -r ..\DiAuto-MG4-v1.9.7.apk
+adb install -r ..\DiAuto-MG4-v1.9.8.apk
 ```
 
 **Normal phone / tablet** (debug keystore, Demo battery):
