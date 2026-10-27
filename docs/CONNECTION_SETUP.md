@@ -11,6 +11,9 @@ unavailable on this unit; use the car's built-in Wi-Fi hotspot.
 2. Open DiAuto-MG4 on the head unit and go to **Settings → Connection setup**.
 3. Select **Built-in car hotspot**, enter the car's hotspot name and password, and
    save the settings. Keep the car hotspot enabled.
+   For this transport, DiAuto-MG4 prefers the BSSID read from the active hotspot
+   interface; an Advanced **Static BSSID** is only a fallback if the live address
+   cannot be read.
 4. Enable Bluetooth and Wi-Fi on the phone, then pair it with the MG4 using the car's
    Bluetooth settings.
 5. In DiAuto-MG4, tap **Connect phone** and select the paired phone if prompted.

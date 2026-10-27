@@ -6,6 +6,14 @@ Phone APK: `com.drivehub.diauto.mg4.phone`, without the system UID.
 
 Do **not** run DiPlay-MG4 CarPlay and DiAuto-MG4 Android Auto at the same time.
 
+## Safety gate
+
+Before any in-vehicle test, complete [the MG4 rollback and recovery
+checklist](MG4_ROLLBACK.md). Test while parked, keep the OEM Android Auto blocker
+off for the initial run, and stop immediately on vehicle-function anomalies or
+unexpected package/signature errors. Do not treat the phone flavor as a substitute
+for validating the platform-signed car flavor.
+
 ## Build & install
 
 1. Host smoke (JDK 17+, `local.properties` → `sdk.dir`):

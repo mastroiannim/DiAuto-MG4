@@ -49,6 +49,8 @@ settings before uninstalling; uninstalling removes local app data.
 
 See [README.md](../README.md) for build commands and the Release/MVP signing setup.
 See [MG4 testing](MG4_TESTING.md) for the vehicle checklist.
+Before installing the `car` build, follow the [MG4 rollback and recovery
+runbook](MG4_ROLLBACK.md). Do not proceed without a tested recovery path.
 
 ## Troubleshooting
 
