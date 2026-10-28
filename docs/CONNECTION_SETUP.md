@@ -1,7 +1,10 @@
 # MG4 built-in hotspot connection setup
 
 This guide covers wireless Android Auto between an MG4 head unit and an Android
-phone. It is written for the MG4 Comfort SWI69 running Android 9. Wi-Fi Direct is
+phone. It is written for the MG4 running Android 9 (operator-reported working on
+Luxury 64 kWh, SWI68-29958-1300R63; not verifiable from source). The test suite has
+firewall-script fixtures labeled SWI68 R71 and SWI69 R42, which do not establish
+behavior on other revisions. Wi-Fi Direct is
 unavailable on this unit; use the car's built-in Wi-Fi hotspot.
 
 ## Set up the car hotspot
@@ -22,7 +25,14 @@ unavailable on this unit; use the car's built-in Wi-Fi hotspot.
 The phone does not need to join the hotspot manually first; DiAuto-MG4 provides the
 saved connection details during pairing. A car internet plan is not required for the
 local connection, though internet access depends on the phone and vehicle network
-configuration. If the hotspot name or password changes, update the saved details.
+configuration. If the hotspot name or password changes, update the saved details. Save the password:
+if no password is saved and the live hotspot configuration cannot be read, an empty
+passphrase may be advertised and the phone can refuse to join (observed
+`status=-3`). Uninstalling removes local app data, so re-enter them after a reinstall.
+
+On a restrictive default-reject firewall the app picks a free allowed port other than
+8080/6010; if those are the only allowed ports, it declines to start the wireless
+listener (`CarNetworkQuirks`).
 
 USB Android Auto is also available with a USB data cable and **Connect with USB**.
 Test one Android Auto host at a time.

@@ -1,7 +1,8 @@
 # Install DiAuto-MG4
 
-DiAuto-MG4 is an Android Auto host for the MG4 Android head unit (tested on MG4
-Comfort SWI69 / Android 9). The `car` build is intended for the head unit and requires
+DiAuto-MG4 is an Android Auto host for the MG4 Android head unit (operator-reported
+test on MG4 Luxury 64 kWh, firmware SWI68-29958-1300R63, Android 9; not verifiable
+from source, and other revisions, including SWI69, are untested). The `car` build is intended for the head unit and requires
 the matching platform signature for its system UID features. The `phone` build is a
 separate, ordinary Android app for desk testing; it is not verified as a vehicle
 installation.
@@ -19,8 +20,12 @@ vehicle; use the platform-signed `car` build for MG4 testing.
 
 ## Install on the MG4
 
-1. Build or obtain a platform-signed `car` APK. Do not install an ordinary
-   `phone` APK when testing the MG4 system-UID features.
+1. Build or obtain a platform-signed `car` APK: the `DiAuto-MG4-vX.Y.Z-car.apk`
+   release asset or the output of `scripts\build_mg4.ps1` (`DiAuto-MG4-vX.Y.Z.apk`). Do not install an
+   ordinary `phone` APK when testing the MG4 system-UID features, and do not use
+   `app\build\outputs\apk\car\release\*.apk` unless its certificate has been verified:
+   Gradle does not platform-sign it (it is release-signed or unsigned depending on the
+   local keystore), and the head unit rejects it with "App not installed".
 2. Transfer the APK to a USB drive. On the head unit, open Bluetooth Settings and
    select the car name.
 3. Hold the comma key to open the settings, then choose **Android Keyboard Settings**
@@ -56,6 +61,13 @@ runbook](MG4_ROLLBACK.md). Do not proceed without a tested recovery path.
 
 - If installation is blocked, check the head unit's firmware policy; ADB is optional
   and may not be enabled.
+- "App not installed" for the `car` APK means the signing certificate is not the MG4
+  platform certificate (`android:sharedUserId="android.uid.system"`). Install the
+  `-car.apk` release asset instead.
+- If the phone logs `WifiConnectStatus status=-3` and `pskLen=0`, no hotspot password
+  was available: with no saved password and no readable live configuration an empty
+  passphrase can be advertised, and Android Auto usually refuses to join. Re-enter
+  SSID and password in **Settings → Connection setup** (uninstalling removes local app data).
 - If the phone does not connect, confirm Bluetooth pairing, Wi-Fi is enabled, and the
   MG4 built-in hotspot details are correct in DiAuto-MG4's connection settings.
 - For reports, include MG4 model/firmware, phone model/Android version, connection

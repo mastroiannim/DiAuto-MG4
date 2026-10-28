@@ -1,6 +1,6 @@
 # DiAuto-MG4
 
-Wireless / USB **Android Auto** for the MG4 Android head unit (SWI69), with live
+Wireless / USB **Android Auto** for the MG4 Android head unit (tested on SWI68), with live
 battery SoC forwarded into Google Maps via Android Auto `VehicleEnergyModel`
 (sensor types 23/25).
 
@@ -21,7 +21,20 @@ The phone flavor is not a substitute for the platform-signed car build: it is no
 expected to read MG4 SoC/BMS data through CarProperty or force-stop OEM Android Auto
 apps. Phone-flavor behavior on an MG4 has not been verified on a vehicle.
 
+## Tested configuration
+
+- Operator-reported vehicle test: MG4 Luxury 64 kWh, infotainment firmware **SWI68-29958-1300R63**, `car` flavor v1.9.8 (platform-signed), working. This is not verifiable from the source code.
+- Other firmware/trim combinations are untested.
+- `CarNetworkQuirksTest` contains firewall-script fixtures labeled SWI68 R71 and SWI69 R42 (DROP rules only, no whitelist, so the listener falls back to port 30518). They do not establish that every SWI68/SWI69 revision, including R63, uses the same rules.
+- The code catalogue records battery power and battery temperature as never published on SWI68, based on captures on SWI68-29958-1300R67 (`CarPropertyEvidence.kt`); this is not an R63-specific measurement.
+
 ## Installing APKs on the MG4
+
+Install only the platform-signed `-car.apk` (release asset). The `car` flavor uses
+`android.uid.system`; an APK signed with any other key fails with "App not installed".
+In the app, save and verify the car hotspot SSID and password. If live hotspot
+configuration cannot be read and no password is saved, an empty passphrase may be
+advertised and the phone can refuse to join (observed: `status=-3`, `pskLen=0`).
 
 If you haven't sideloaded apps before:
 
@@ -42,6 +55,15 @@ $env:MG4_PLATFORM_KEYS_DIR = "C:\path\to\platform-keys"  # platform.pk8 + platfo
 powershell -File scripts\build_mg4.ps1
 adb install -r ..\DiAuto-MG4-v1.9.8.apk
 ```
+
+The script writes `..\DiAuto-MG4-vX.Y.Z.apk`; when publishing a release, upload it as
+`DiAuto-MG4-vX.Y.Z-car.apk` (the OTA picker matches on the `-car` / `-phone` suffix).
+
+> Gradle `carRelease` (`app\build\outputs\apk\car\release\*.apk`) is not platform-signed:
+> depending on local keystore configuration it is release-signed or unsigned. Do not
+> install it on the car unless its certificate has been verified; the head unit rejects
+> it ("App not installed"). The `build_mg4` scripts build `carDebug` and sign that APK
+> with the external platform key.
 
 **Normal phone / tablet** (debug keystore, Demo battery):
 
@@ -73,9 +95,19 @@ The release signing config uses the `headunit-revived` alias unless overridden b
 is for local use and must be signed with the MG4 platform certificate to retain the
 system UID; a regular app-signing key does not grant that privilege.
 
-Telegram crash-report upload is optional and off by default in release builds. It is
-available only when both `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` are supplied at
-build time; leave them unset to keep upload unavailable.
+Telegram crash-report upload is optional. Debug variants (including `carDebug`, the
+variant the `build_mg4` scripts sign) read `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`;
+release variants read `TELEGRAM_BOT_TOKEN_RELEASE` and `TELEGRAM_CHAT_ID_RELEASE`.
+Credentials embedded in any APK are extractable: leave the applicable pair unset for
+every artifact you distribute.
+
+### Releases and OTA updates
+
+Releases are published at <https://github.com/mastroiannim/DiAuto-MG4/releases>. For
+each release, publish both flavor assets: `DiAuto-MG4-vX.Y.Z-car.apk` (platform-signed,
+for the head unit) and `DiAuto-MG4-vX.Y.Z-phone.apk`. The app checks this repository's GitHub releases for
+OTA updates and prefers the asset matching the installed flavor by its `-car` /
+`-phone` suffix. This is a preference, not a hard filter, so publish both assets.
 
 ### Google Maps SoC note
 

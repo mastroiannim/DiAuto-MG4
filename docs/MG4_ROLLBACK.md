@@ -1,9 +1,10 @@
 # MG4 rollback and recovery — DiAuto car 1.9.8
 
-This is a conservative operator runbook, not an SAIC service procedure. It has not
-been validated on a vehicle. Use only on the documented MG4 SWI69 / Android 9
-target, while parked, and stop rather than improvising if the head unit behaves
-differently.
+This is a conservative operator runbook, not an SAIC service procedure. The rollback
+procedure itself has not been validated on a vehicle. The operator reports running
+v1.9.8 on SWI68-29958-1300R63; this cannot be verified from source. Use only on the
+documented MG4 / Android 9 target, while parked, and stop rather than improvising if
+the head unit behaves differently.
 
 ## Go/no-go before installation
 
@@ -162,7 +163,8 @@ screen, loss of stock functionality, or vehicle-function warning.
 ## Limits
 
 This plan does not establish that ADB is enabled, that uninstall is permitted, that
-the listed OEM packages exist on every SWI69 build, or that a prior APK can be
+the listed OEM packages exist on every SWI68/SWI69 build (test fixtures cover only
+SWI68 R71 and SWI69 R42), or that a prior APK can be
 installed as a downgrade. It does not validate firmware OTA behavior or recovery
 from a vehicle-specific head-unit failure. Those require the exact vehicle and,
 where system-level recovery is needed, MG service.

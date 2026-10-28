@@ -1,8 +1,9 @@
 # DiAuto-MG4 1.9.8 — 2026-10-27
 
 - OTA updates now read releases from the mastroiannim/DiAuto-MG4 GitHub repository.
-- OTA picks the APK matching the installed flavor (`-car` or `-phone`) so a head unit never downloads the phone build.
+- OTA scores APK assets by flavor suffix and prefers the matching `-car` / `-phone` asset; it can still fall back to an opposite-flavor APK if no matching asset exists. Publish both flavors. Known limits are listed in `docs/MG4_TESTING.md`.
 - Hotspot BSSID: prefer the live access-point interface address over the static override, with a mismatch warning.
+- Minor UI tweaks: compacted home screen layout; crash reports can be shared via the Android chooser when Telegram upload is unavailable.
 
 # DiAuto-MG4 1.9.7 — 2026-10-26
 
