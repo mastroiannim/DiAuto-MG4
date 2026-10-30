@@ -45,3 +45,24 @@ or Telegram-token configuration is changed here.
 
 The Pages workflow separately deploys only `site/` after regenerating all five
 language editions. Pages uses the GitHub Actions deployment source.
+
+## Releases
+
+`release.yml` runs only when a tag matching `vX.Y.Z` is pushed. It requires the
+tagged commit to be on `main` and the tag to equal `versionName` in
+`app/build.gradle.kts`, runs the car unit tests, builds `phoneRelease` signed with
+the release key, verifies the signature with `apksigner`, and publishes the APK
+plus `SHA256SUMS.txt` to a GitHub release. Signing runs in a read-only job; only
+the final publish job has `contents: write`. The car flavor needs the platform key
+and is still built and signed locally.
+
+Create a GitHub **environment** named `release` (optionally with required
+reviewers) holding these secrets:
+
+- `RELEASE_KEYSTORE_BASE64` — the keystore, e.g. `base64 -w0 headunit-release-key.jks`
+- `RELEASE_KEYSTORE_PASSWORD`
+- `RELEASE_KEY_ALIAS`
+- `RELEASE_KEY_PASSWORD`
+
+To release: bump `versionCode`/`versionName`, merge to `main`, then
+`git tag vX.Y.Z && git push origin vX.Y.Z`.
