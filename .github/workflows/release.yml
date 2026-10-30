@@ -85,13 +85,27 @@ jobs:
         run: ./gradlew :app:assembleCarRelease :app:assemblePhoneRelease --stacktrace
 
       - name: Verify, rename and checksum APKs
+        env:
+          # SHA-256 of the platform certificate the MG4 firmware requires (android.uid.system).
+          PLATFORM_CERT_SHA256: c8a2e9bccf597c2fb6dc66bee293fc13f2fc47ec77bc6b2b0d52c11f51192ab8
         run: |
           mkdir -p dist
+          apksigner="$ANDROID_HOME/build-tools/36.0.0/apksigner"
           for flavor in car phone; do
             src="$(ls app/build/outputs/apk/$flavor/release/*.apk)"
-            "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose "$src"
             dest="dist/DiAuto-MG4-${GITHUB_REF_NAME}-${flavor}.apk"
-            cp "$src" "$dest"
+            if [ "$flavor" = car ]; then
+              # The car APK uses sharedUserId=android.uid.system, so it must carry the
+              # platform signature (tools/platform.*), not the release key.
+              "$apksigner" sign --key tools/platform.pk8 --cert tools/platform.x509.pem --out "$dest" "$src"
+            else
+              cp "$src" "$dest"
+            fi
+            "$apksigner" verify --verbose --print-certs "$dest" | tee "$RUNNER_TEMP/cert-$flavor.txt"
+            if [ "$flavor" = car ]; then
+              grep -qi "certificate SHA-256 digest: $PLATFORM_CERT_SHA256" "$RUNNER_TEMP/cert-car.txt" \
+                || { echo "Car APK is not signed with the platform certificate" >&2; exit 1; }
+            fi
             (cd dist && sha256sum "$(basename "$dest")" > "$(basename "$dest").sha256")
           done
           ls -l dist
