@@ -50,11 +50,12 @@ language editions. Pages uses the GitHub Actions deployment source.
 
 `release.yml` runs only when a tag matching `vX.Y.Z` is pushed. It requires the
 tagged commit to be on `main` and the tag to equal `versionName` in
-`app/build.gradle.kts`, runs the car unit tests, builds `phoneRelease` signed with
-the release key, verifies the signature with `apksigner`, and publishes the APK
-plus `SHA256SUMS.txt` to a GitHub release. Signing runs in a read-only job; only
-the final publish job has `contents: write`. The car flavor needs the platform key
-and is still built and signed locally.
+`app/build.gradle.kts`, runs the car unit tests, builds `carRelease` and
+`phoneRelease` signed with the release key, verifies the signatures with
+`apksigner`, and publishes `DiAuto-MG4-vX.Y.Z-car.apk`, `DiAuto-MG4-vX.Y.Z-phone.apk`
+and one `.sha256` per APK to a GitHub release (an existing release for the same
+tag is replaced). Signing runs in a read-only job; only the final publish job has
+`contents: write`. The car APK uses the same release key, not the platform key.
 
 Create a GitHub **environment** named `release` (optionally with required
 reviewers) holding these secrets:
