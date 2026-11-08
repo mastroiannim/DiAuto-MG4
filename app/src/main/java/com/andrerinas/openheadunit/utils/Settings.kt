@@ -158,8 +158,10 @@ class Settings(private val context: Context) {
             val set = prefs.getStringSet("key-codes", mutableSetOf())!!
             val map = mutableMapOf<Int, Int>()
             set.forEach {
-                val codes = it.split("-")
-                map[codes[0].toInt()] = codes[1].toInt()
+                val codes = it.split("-", limit = 2)
+                val logical = codes.getOrNull(0)?.toIntOrNull()
+                val physical = codes.getOrNull(1)?.toIntOrNull()
+                if (logical != null && physical != null) map[logical] = physical
             }
             return map
         }

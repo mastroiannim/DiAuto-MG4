@@ -267,6 +267,11 @@ class CommManager(
             }
 
             if (_connection?.connect() ?: false) {
+                if (_connectionState.value !is ConnectionState.Connecting) {
+                    _connection?.disconnect()
+                    _connection = null
+                    return@withContext
+                }
                 settings.saveLastConnection(type = Settings.CONNECTION_TYPE_USB, usbDevice = UsbDeviceCompat.getUniqueName(device))
                 _connectionState.emit(ConnectionState.Connected)
             } else {
@@ -314,6 +319,11 @@ class CommManager(
             _connection = SocketAccessoryConnection(socket, context)
 
             if (_connection?.connect() ?: false) {
+                if (_connectionState.value !is ConnectionState.Connecting) {
+                    _connection?.disconnect()
+                    _connection = null
+                    return@withContext
+                }
                 settings.saveLastConnection(type = Settings.CONNECTION_TYPE_WIFI, ip = socket.inetAddress?.hostAddress ?: "")
                 _connectionState.emit(ConnectionState.Connected)
             } else {
@@ -555,15 +565,18 @@ class CommManager(
         }
 
         // 4. De-duplication: one press reaches us from several delivery paths at once.
-        val state = keyStates[logicalCode] ?: KeyDebouncePolicy.KeyState()
-        val decision = KeyDebouncePolicy.decide(
-            state = state,
-            isPress = isPress,
-            downTime = downTime,
-            isMediaKey = isMedia,
-            now = SystemClock.elapsedRealtime()
-        )
-        keyStates[logicalCode] = decision.state
+        val decision = synchronized(keyStates) {
+            val state = keyStates[logicalCode] ?: KeyDebouncePolicy.KeyState()
+            val result = KeyDebouncePolicy.decide(
+                state = state,
+                isPress = isPress,
+                downTime = downTime,
+                isMediaKey = isMedia,
+                now = SystemClock.elapsedRealtime()
+            )
+            keyStates[logicalCode] = result.state
+            result
+        }
 
         if (!decision.forward) {
             AppLog.v("CommManager: Dropping key $logicalCode (isPress=$isPress, src=$source) - ${decision.dropReason}")
@@ -864,7 +877,7 @@ class CommManager(
         _transport = null
         _connection = null
         com.andrerinas.openheadunit.vehicle.Mg4EnergyReporter.unbind(transport)
-        keyStates.clear()
+        synchronized(keyStates) { keyStates.clear() }
         btMediaLinkCached = null
         btMediaLinkCheckedAt = null
         // Counts frames over the whole session rather than reading lastFrameRenderedMs, which the

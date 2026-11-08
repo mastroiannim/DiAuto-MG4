@@ -1,3 +1,10 @@
+# DiAuto MG4+ 2.3.2
+
+- Fixed wireless disconnects caused by misreported partial socket reads and by handshake responses discarded when TCP delivered them together with another message.
+- Serialized SSL reinitialization across reconnects and made sensor and media-session tracking thread-safe.
+- Prevented a session from becoming connected after a user exit and synchronized steering-wheel key debouncing.
+- Steering-wheel remapping now takes effect without restarting projection; malformed saved mappings are ignored instead of crashing.
+
 # DiAuto MG4+ 2.3.1
 
 - Removed automatic battery preheating from navigation so it cannot start while driving.

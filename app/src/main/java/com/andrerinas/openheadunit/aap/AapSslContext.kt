@@ -19,6 +19,7 @@ class AapSslContext(keyManager: SingleKeyKeyManager): AapSsl {
     
     @Volatile var isUserDisconnect = false
 
+    @Synchronized
     override fun performHandshake(connection: AccessoryConnection): Boolean {
         if (prepare() < 0) return false
 

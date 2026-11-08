@@ -9,7 +9,6 @@ import android.os.Handler
 import android.os.HandlerThread
 import android.os.Process
 import android.os.SystemClock
-import android.util.SparseIntArray
 import android.view.KeyEvent
 import com.andrerinas.openheadunit.aap.protocol.Channel
 import com.andrerinas.openheadunit.aap.protocol.messages.KeyCodeEvent
@@ -74,11 +73,10 @@ class AapTransport(
     private var sendThread: HandlerThread? = null
     private var pollThread: HandlerThread? = null
     private val micRecorder: MicRecorder = MicRecorder(settings.micSampleRate, context)
-    private val sessionIds = SparseIntArray(4)
-    private val startedSensors = HashSet<Int>(4)
+    private val sessionIds = java.util.concurrent.ConcurrentHashMap<Int, Int>(4)
+    private val startedSensors = java.util.concurrent.ConcurrentHashMap.newKeySet<Int>()
     private val droppedSensorEvents = HashMap<Int, Int>(4)
     private var lastSensorDropLogMs = 0L
-    private val keyCodes = mutableMapOf<Int, Int>()
     private val modeManager: UiModeManager =
         context.getSystemService(UI_MODE_SERVICE) as UiModeManager
     private var connection: AccessoryConnection? = null
@@ -658,20 +656,29 @@ class AapTransport(
                     if (ret < 0) transportError = true   // EOF or IOException, not a timeout
                     if (ret > 0) peerSentBytes = true
                     if (ret <= 0) break  // timeout or error — fall through to outer retry
-                    if (ret >= 6
-                        && buffer[0] == 0.toByte()
-                        && buffer[4] == 0.toByte()
-                        && buffer[5] == 2.toByte()) {
-                        AppLog.i("Handshake: Version response received (ret=$ret, attempt=$attempt).")
-                        received = true
-                        break
+                    // TCP can coalesce a proactive message and VERSION_RESPONSE into one read.
+                    // Walk every complete message in the buffer instead of inspecting only the
+                    // first header and discarding a response that arrived behind another message.
+                    var offset = 0
+                    while (offset + 6 <= ret) {
+                        val ch = buffer[offset].toInt() and 0xFF
+                        val totalLength = ((buffer[offset + 2].toInt() and 0xFF) shl 8) or
+                            (buffer[offset + 3].toInt() and 0xFF)
+                        val type = ((buffer[offset + 4].toInt() and 0xFF) shl 8) or
+                            (buffer[offset + 5].toInt() and 0xFF)
+                        if (ch == 0 && type == 2) {
+                            AppLog.i("Handshake: Version response received (ret=$ret, attempt=$attempt, offset=$offset).")
+                            received = true
+                            break
+                        }
+                        AppLog.w("Handshake: Ignoring unexpected message " +
+                                 "(ch=$ch, type=0x${type.toString(16)}, offset=$offset, len=$ret). " +
+                                 "Waiting for VERSION_RESPONSE.")
+                        val messageSize = totalLength + 4
+                        if (totalLength < 2 || messageSize > ret - offset) break
+                        offset += messageSize
                     }
-                    // Wrong message — log and keep draining.
-                    val ch   = buffer[0].toInt() and 0xFF
-                    val type = ((buffer[4].toInt() and 0xFF) shl 8) or (buffer[5].toInt() and 0xFF)
-                    AppLog.w("Handshake: Ignoring unexpected message " +
-                             "(ch=$ch, type=0x${type.toString(16)}, len=$ret). " +
-                             "Waiting for VERSION_RESPONSE.")
+                    if (received) break
                 }
                 if (received) break
                 AppLog.w("Handshake: No VERSION_RESPONSE within 2s (attempt $attempt), ret=$ret")
@@ -824,11 +831,11 @@ class AapTransport(
     }
 
     internal fun sendMediaAck(channel: Int) {
-        send(MediaAck(channel, sessionIds.get(channel)))
+        send(MediaAck(channel, sessionIds[channel] ?: 0))
     }
 
     internal fun setSessionId(channel: Int, sessionId: Int) {
-        sessionIds.put(channel, sessionId)
+        sessionIds[channel] = sessionId
     }
 
     // Mic flow control, as AllGo's stack does: the phone names how many mic frames may be in flight

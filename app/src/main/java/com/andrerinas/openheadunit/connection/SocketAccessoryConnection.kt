@@ -61,23 +61,27 @@ class SocketAccessoryConnection(private val ip: String, private val port: Int, p
 
     override fun recvBlocking(buf: ByteArray, length: Int, timeout: Int, readFully: Boolean): Int {
         val inp = input ?: return -1
+        var totalRead = 0
         return try {
             // Dynamically apply the caller's timeout so handshake (short timeouts)
             // and streaming (long timeouts) both work correctly on the same socket.
             try { transport.soTimeout = timeout } catch (_: Exception) {}
             if (readFully) {
-                inp.readFully(buf, 0, length)
+                while (totalRead < length) {
+                    val read = inp.read(buf, totalRead, length - totalRead)
+                    if (read < 0) return if (totalRead > 0) totalRead else -1
+                    totalRead += read
+                }
                 length
             } else {
                 inp.read(buf, 0, length)
             }
         } catch (e: SocketTimeoutException) {
-            // With raw DataInputStream (no BufferedInputStream), timeout during
-            // small reads (4-byte header) virtually never causes partial consumption.
-            // Let the caller decide if this is fatal based on context.
-            0
+            // A readFully-style loop can time out after consuming part of a message. Returning
+            // that count lets the recovery policy distinguish it from a genuinely idle socket.
+            totalRead
         } catch (e: IOException) {
-            -1
+            if (totalRead > 0) totalRead else -1
         }
     }
 

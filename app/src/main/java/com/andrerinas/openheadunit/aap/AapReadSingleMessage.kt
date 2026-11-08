@@ -101,11 +101,11 @@ internal class AapReadSingleMessage(
                     return -1
                 }
                 else -> {
-                    // "got 0" is the timeout catch's return value, not a count: recvBlocking uses
-                    // readFully, which loops, so an unknown number of these bytes are already gone.
+                    // The unread remainder is still on the socket, so the next read would treat
+                    // it as a header even though the consumed byte count is known.
                     AppLog.e(
-                        "AapRead: body read returned $msgSize of ${recvHeader.enc_len} expected - an unknown " +
-                            "number of bytes were consumed, so the stream can no longer be framed. Disconnecting to resync."
+                        "AapRead: body read returned $msgSize of ${recvHeader.enc_len} expected - " +
+                            "the message is incomplete, so the stream can no longer be framed. Disconnecting to resync."
                     )
                     return -1
                 }

@@ -20,13 +20,12 @@ package com.andrerinas.openheadunit.aap
  * desynchronize the stream."* The socket reader had no equivalent, and the socket path is the one
  * every wireless user is on.
  *
- * ### Why a short read means an *unknown* number of bytes were consumed
+ * ### Why a short read cannot be resumed
  *
- * `SocketAccessoryConnection.recvBlocking` calls `DataInputStream.readFully` and returns `0` from
- * its `SocketTimeoutException` catch. `readFully` loops internally until the buffer is full, so a
- * timeout partway through an 8 KB body has already taken an unknown number of bytes off the socket.
- * The `0` is the catch block's value, not a count. That is why [afterBodyRead] cannot subtract and
- * resume: there is no number to subtract.
+ * `SocketAccessoryConnection.recvBlocking` reports how many bytes a readFully-style loop consumed
+ * before a timeout or EOF. Even with that count, the unread remainder of the current message is
+ * still on the socket: resuming would read it as the next header. A short body read therefore means
+ * the framing is lost even though the number consumed is now known.
  */
 object AapReadRecoveryPolicy {
 
